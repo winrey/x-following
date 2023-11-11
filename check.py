@@ -1,4 +1,5 @@
 import base64
+from datetime import datetime
 from io import BytesIO
 import json
 from os import system
@@ -18,6 +19,7 @@ init(autoreset=True)
 
 FOLLOWING_CACHE_PATH = 'cache/followings.json'
 WHITELIST_PATH = 'cache/whitelist.json'
+BLACKLIST_PATH = 'cache/blacklist.json'
 
 client = TwitterClient(
     authorization_token=AUTHORIZATION_TOKEN,
@@ -31,6 +33,12 @@ def load_followings():
             return json.load(f)
     except FileNotFoundError:
         return False
+    
+
+def select_account():
+    users = client.get_multi_user_info()
+    # TODO: Select Account
+    client.set_current_user_info(users[0])
 
 
 def get_all_followings(force_update=False):
@@ -39,9 +47,6 @@ def get_all_followings(force_update=False):
 
     if followings and not force_update:
         return followings
-
-    users = client.get_multi_user_info()
-    client.set_current_user_info(users[0])
 
     followings = client.get_all_following_by_graphql(50)
 
@@ -74,27 +79,32 @@ def is_public_account(following: FollowingUser):
 def filter_not_public_accounts(followings: List[FollowingUser]):
     return [following for following in followings if not is_public_account(following)]
 
-
-def load_whitelist() -> List[FollowingUser]:
-    try:
-        with open(WHITELIST_PATH, 'r') as f:
-            return [json.loads(line) for line in f.readlines()]
-    except FileNotFoundError:
-        return []
-
-
-def save_whitelist(following: FollowingUser):
-    with open(WHITELIST_PATH, 'a') as f:
-        f.write(json.dumps(following) + '\n')
+def use_list(path: str):
+    def load_list() -> List[FollowingUser]:
+        try:
+            with open(path, 'r') as f:
+                return [json.loads(line) for line in f.readlines()]
+        except FileNotFoundError:
+            return []
 
 
-def filter_not_in_white_list(followings: List[FollowingUser]):
-    white_list = load_whitelist()
-    hash_screen_name = {following['screen_name']: following for following in white_list}
-    hash_id = {following['id']: following for following in white_list}
-    def is_in_whitelist(following: FollowingUser):
-        return following['screen_name'] in hash_screen_name or following['id'] in hash_id
-    return [following for following in followings if not is_in_whitelist(following)]
+    def save_list(following: FollowingUser):
+        with open(path, 'a') as f:
+            f.write(json.dumps(following) + '\n')
+
+
+    def filter_not_in_list(followings: List[FollowingUser]):
+        white_list = load_list()
+        hash_screen_name = {following['screen_name']: following for following in white_list}
+        hash_id = {following['id']: following for following in white_list}
+        def is_in_whitelist(following: FollowingUser):
+            return following['screen_name'] in hash_screen_name or following['id'] in hash_id
+        return [following for following in followings if not is_in_whitelist(following)]
+    
+    return load_list, save_list, filter_not_in_list
+
+_, save_whitelist, filter_not_in_whitelist = use_list(WHITELIST_PATH)
+_, save_blacklist, filter_not_in_blacklist = use_list(BLACKLIST_PATH)
 
 
 BOLD = Style.BRIGHT
@@ -116,7 +126,7 @@ def center_text(text):
 
 def print_centered_description(description):
     term_width = os.get_terminal_size().columns
-    max_line_length = term_width // 2  # Maximum length of the line is half the width of the terminal
+    max_line_length = term_width // 3  # Maximum length of the line is half the width of the terminal
 
     # Split the description into words
     words = description.split()
@@ -174,15 +184,22 @@ def display_image_iterm2_from_url(image_url, scale=0.1):
 def trial_single(following: FollowingUser):
     is_verify = following.get('is_blue_verified', None) or following.get('is_verified', None)
     personal_site = following.get('legacy', {}).get('entities', {}).get('url', {}).get('urls', [{}])[0].get('expanded_url', None)
+    is_following = following.get('following', False)
+    follow_by = following.get('followed_by', False)
+    relation = '❤' if is_following and follow_by else '←' if follow_by else '→' if is_following else 'x'
     
     # Bold the name and handle, and add a checkmark or cross emoji based on verification status
     # Centered and styled text output
     display_image_iterm2_from_url(following['profile_image_url_https'])
     print(center_text(f"{BOLD}{following['name']}{RESET} (@{following['screen_name']}) {GREEN+'✅' if is_verify else RED+''}\n"))
     print_centered_description(following['description'])
+    print()
     if personal_site:
         print(center_text(f"{CYAN}{personal_site}{RESET}"))
+        print()
     print(center_text(f"{MAGENTA}{following.get('friends_count', 'x')} following, {following.get('followers_count', 'x')} followers"))
+    print()
+    print(center_text(f"DM: {following.get('can_dm', False) and '✅' or '❌'} | You {relation} 👤"))
     print(center_text(f"{BLUE}https://twitter.com/{following['screen_name']}{RESET}"))
     
     
@@ -197,14 +214,15 @@ def trial_single(following: FollowingUser):
         
         if choice == 'g':
             print(center_text(f"{RED}Guilty! {following['name']} (@{following['screen_name']}) Unfollowed!{RESET}"))
-            # client.unfollow(following)  # Uncomment this when you integrate with Twitter API
+            client.unfollow(following)  # Uncomment this when you integrate with Twitter API
+            save_blacklist(following)
             break
         elif choice == 'n':
             print(center_text(f"{BLUE}Not Guilty! {following['name']} (@{following['screen_name']}) Keep Following (for now...){RESET}"))
             break
         elif choice == 'w':
             print(center_text(f"{GREEN}Whitelisted! {following['name']} (@{following['screen_name']}){RESET}"))
-            # save_whitelist(following)  # Uncomment this when you integrate with Twitter API
+            save_whitelist(following)  # Uncomment this when you integrate with Twitter API
             break
         elif choice == 'p':
             print(center_text(f"{CYAN}Opening Profile... {following['name']} (@{following['screen_name']}){RESET}"))
@@ -227,15 +245,27 @@ def trials(subjects: List[FollowingUser]):
         trial_single(subject)
 
 
-def main():
+def main_trails():
+    select_account()
     followings = get_all_followings()
     subjects = filter_one_way_followings(followings)
     subjects = filter_not_public_accounts(subjects)
-    subjects = filter_not_in_white_list(subjects)
+    subjects = filter_not_in_whitelist(subjects)
+    subjects = filter_not_in_blacklist(subjects)
 
     trials(subjects)
 
 
+def save_followers():
+    select_account()
+    followers = client.get_all_followers_by_graphql(50)
+    now = datetime.now()
+    name = client.get_current_user_info()['screen_name']
+    with open(f'cache/followers-{name}-{now}.json', 'w') as f:
+        json.dump(followers, f)
+
+
 if __name__ == '__main__':
-    main()
+    # main_trails()
+    save_followers()
 

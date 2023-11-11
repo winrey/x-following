@@ -120,7 +120,11 @@ class TwitterClient:
     def set_current_user_info(self, user: MyUser):
         self.current_user_info = user
 
-    def get_following_by_graphql(self, max=20, cursor="") -> Tuple[List[FollowingUser], str]:
+    def get_current_user_info(self) -> MyUser:
+        return self.current_user_info
+
+    def _get_user_list_by_graphql(self, url, referer, max, cursor):
+        
         if not self.current_user_info:
             raise Exception('No current user info')
 
@@ -157,10 +161,8 @@ class TwitterClient:
             "responsive_web_enhance_cards_enabled": False
         }
 
-        referer = f'https://twitter.com/{self.current_user_info["screen_name"]}/following'
-
         response = requests.get(
-            'https://twitter.com/i/api/graphql/8cyc0OKedV_XD62fBjzxUw/Following',
+            url,
             headers=self.get_auth_headers(referer),
             params={
                 'variables': json.dumps(variables_dict),
@@ -200,12 +202,41 @@ class TwitterClient:
         else:
             response.raise_for_status()
 
+    def get_following_by_graphql(self, max=20, cursor="") -> Tuple[List[FollowingUser], str]:
+        referer = f'https://twitter.com/{self.current_user_info["screen_name"]}/following'
+        return self._get_user_list_by_graphql(
+            'https://twitter.com/i/api/graphql/8cyc0OKedV_XD62fBjzxUw/Following',
+            referer,
+            max,
+            cursor,
+        )
+
     def get_all_following_by_graphql(self, singe_max=50) -> List[FollowingUser]:
         users = []
         cursor = ""
         while True:
             print(f"fetching {singe_max} users, cursor: {cursor}, total: {len(users)}")
             new_users, cursor = self.get_following_by_graphql(singe_max, cursor)
+            users.extend(new_users)
+            if not cursor or len(new_users) <= 1:
+                break
+        return users
+
+    def get_followers_by_graphql(self, max=20, cursor=""):
+        referer = f'https://twitter.com/{self.current_user_info["screen_name"]}/followers'
+        return self._get_user_list_by_graphql(
+            "https://twitter.com/i/api/graphql/9LlZicVr2IBf4u2qW5n4-A/Followers",
+            referer,
+            max,
+            cursor,
+        )
+
+    def get_all_followers_by_graphql(self, singe_max=50) -> List[FollowingUser]:
+        users = []
+        cursor = ""
+        while True:
+            print(f"fetching {singe_max} users, cursor: {cursor}, total: {len(users)}")
+            new_users, cursor = self.get_followers_by_graphql(singe_max, cursor)
             users.extend(new_users)
             if not cursor or len(new_users) <= 1:
                 break
