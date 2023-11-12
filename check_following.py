@@ -1,5 +1,4 @@
 import base64
-from datetime import datetime
 from io import BytesIO
 import json
 from os import system
@@ -9,10 +8,11 @@ from typing import List
 
 from PIL import Image
 import requests
-from client import FollowingUser, TwitterClient
-from secret import AUTHORIZATION_TOKEN, COOKIE_VALUE, CSRF_TOKEN
 import webbrowser
 from colorama import init, Fore, Style
+
+from client import client, FollowingUser
+from common_cli import select_account
 
 # Initialize Colorama
 init(autoreset=True)
@@ -21,24 +21,12 @@ FOLLOWING_CACHE_PATH = 'cache/followings.json'
 WHITELIST_PATH = 'cache/whitelist.json'
 BLACKLIST_PATH = 'cache/blacklist.json'
 
-client = TwitterClient(
-    authorization_token=AUTHORIZATION_TOKEN,
-    cookie_value=COOKIE_VALUE,
-    csrf_token=CSRF_TOKEN,
-)
-
 def load_followings(): 
     try:
         with open(FOLLOWING_CACHE_PATH, 'r') as f:
             return json.load(f)
     except FileNotFoundError:
         return False
-    
-
-def select_account():
-    users = client.get_multi_user_info()
-    # TODO: Select Account
-    client.set_current_user_info(users[0])
 
 
 def get_all_followings(force_update=False):
@@ -65,6 +53,7 @@ def filter_one_way_followings(followings: List[FollowingUser]):
             one_way_followings.append(following)
     return one_way_followings
 
+
 def is_public_account(following: FollowingUser):
     if following["verified"]:
         return True
@@ -76,8 +65,10 @@ def is_public_account(following: FollowingUser):
         return False
     return followers_count / following_count > 30
 
+
 def filter_not_public_accounts(followings: List[FollowingUser]):
     return [following for following in followings if not is_public_account(following)]
+
 
 def use_list(path: str):
     def load_list() -> List[FollowingUser]:
@@ -152,7 +143,7 @@ def print_centered_description(description):
     for line in lines:
         print(YELLOW + line.center(term_width) + RESET)
 
-        
+
 def display_image_iterm2_from_url(image_url, scale=0.1):
     response = requests.get(image_url)
     if response.status_code == 200:
@@ -181,7 +172,7 @@ def display_image_iterm2_from_url(image_url, scale=0.1):
         print(f"Error: Unable to download image. Status code: {response.status_code}")
 
 
-def trial_single(following: FollowingUser):
+def print_following_info(following: FollowingUser):
     is_verify = following.get('is_blue_verified', None) or following.get('is_verified', None)
     personal_site = following.get('legacy', {}).get('entities', {}).get('url', {}).get('urls', [{}])[0].get('expanded_url', None)
     is_following = following.get('following', False)
@@ -201,7 +192,10 @@ def trial_single(following: FollowingUser):
     print()
     print(center_text(f"DM: {following.get('can_dm', False) and '✅' or '❌'} | You {relation} 👤"))
     print(center_text(f"{BLUE}https://twitter.com/{following['screen_name']}{RESET}"))
-    
+
+
+def trial_single(following: FollowingUser):
+    print_following_info(following)
     
     while True:
         print(f"\n\n{GREEN}{center_text(LINE_STR)}{RESET}\n\n")
@@ -235,6 +229,7 @@ def trial_single(following: FollowingUser):
     print()
     input(center_text("Press Enter to continue..."))
 
+
 def trials(subjects: List[FollowingUser]):
     length = len(subjects)
     for idx, subject in enumerate(subjects):
@@ -256,16 +251,6 @@ def main_trails():
     trials(subjects)
 
 
-def save_followers():
-    select_account()
-    followers = client.get_all_followers_by_graphql(50)
-    now = datetime.now()
-    name = client.get_current_user_info()['screen_name']
-    with open(f'cache/followers-{name}-{now}.json', 'w') as f:
-        json.dump(followers, f)
-
-
 if __name__ == '__main__':
-    # main_trails()
-    save_followers()
+    main_trails()
 

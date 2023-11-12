@@ -2,6 +2,8 @@ import requests
 import json
 from typing import Tuple, TypedDict, List, Dict
 
+from secret import AUTHORIZATION_TOKEN, COOKIE_VALUE, CSRF_TOKEN
+
 class MyUser(TypedDict):
     # id is the twitter user id (not the username)
     user_id: str
@@ -264,3 +266,10 @@ class TwitterClient:
             },
         )
         return response.json()
+
+
+client = TwitterClient(
+    authorization_token=AUTHORIZATION_TOKEN,
+    cookie_value=COOKIE_VALUE,
+    csrf_token=CSRF_TOKEN,
+)
