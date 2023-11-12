@@ -1,60 +1,60 @@
 # X Following
 
-Check your following list & review whether they are worth to be followed.
+Check your following list and assess if they're worth your attention.
 
-If you think it's useful, please star it. I will develop more features if I find out it's help you :).
+If you find this tool helpful, give it a star. Your feedback is valuable, and with enough interest, I’ll develop more features.
 
 ## Features
 
-What's the difference between this and directly check the following list on Twitter?
+Why use this instead of checking your following list on Twitter?
 
-- It will help you to filter the public account, and only show you the private account.
-- When it comes to the second time, you'll find it will remember your choice for whitelist and reduce your work.
-- You can backup your followers list to a local file, and find out who unfollowed you.
-- If you are banned by Twitter, your following list or followers list will be lost. But if you use this tool, at least you can backup them.
-- If other people use this tool, more features will be added or we'll consider to make it a twitter app.
+- Filters out public accounts to focus on private ones.
+- Remembers your whitelist choices, saving you time on subsequent uses.
+- Allows you to back up your following list locally to track unfollowers.
+- In case of a Twitter ban, you won't lose your lists if they're backed up here.
+- With wider use, more features will be considered, including a dedicated Twitter app.
 
-## Usage
+## How to Use
 
-install dependencies
+Install dependencies:
 
 ```bash
 pip install -r requirements.txt
 ```
 
-copy secrets.py
-  
+Prepare your configuration file:
+
 ```bash
 cp secrets.example.py secrets.py
 ```
 
-go to [Twitter](https://x.com/) and login, then open the developer tools and copy the cookie, authorization and x-csrf-token to secrets.py
+Go to [Twitter](https://x.com/), sign in, then use the developer tools to copy your cookie, authorization, and x-csrf-token into `secrets.py`
 
-> we will develop a better way to get these values if we find out if it's useful.
+> We're exploring better methods for obtaining these values if the tool proves useful.
 
-Backup your followers list
+Back up your followers list:
 
 ```bash
 python backup_followers.py
 ```
 
-Check your following list
+Review your following list:
 
 ```bash
 python check_following.py
 ```
 
-It will show you the following list, and you can choose:
+You'll be presented with options for each account:
 
-- Guilty: It'll help you to unfollow the account and add it to the backlist.
-- Not Guilty: It'll pass the account(for now😈).
-- Whitelist: It'll add the account to the whitelist, and it'll not show up again.
-- Profile: It'll open the profile page in browser.
+- **Guilty**: Unfollows the account and adds it to the blacklist.
+- **Not Guilty**: Keeps the account as is for now.
+- **Whitelist**: Adds the account to your whitelist so it won't appear again.
+- **Profile**: Opens the user's profile page in your browser.
 
-***It's better to use iterm2 that can show the avatar of the user***
+*Note: For an enhanced experience with user avatars, try using iTerm2.*
 
-## TODO
+## Upcoming Features
 
-[ ] Show latest tweet
-
-[ ] Print who is unfollow you between backups
+- [ ] Display the latest tweet from each user.
+- [ ] Notify you about who has unfollowed you since your last backup.
+- [ ] Summarize your following accounts by LLM.
