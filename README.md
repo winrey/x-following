@@ -38,6 +38,12 @@ Back up your followers list:
 python backup_followers.py
 ```
 
+Compare your followers list from the last backup to your current following list:
+
+```bash
+python compare_followers.py
+```
+
 Review your following list:
 
 ```bash

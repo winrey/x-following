@@ -5,7 +5,7 @@ from colorama import init
 
 from common_cli import select_account
 from client import client
-from compare import compare_followers_with_interact, list_all_followers_file, load_followers_file
+from compare_followers import compare_followers_with_interact, list_all_followers_file, load_followers_file
 
 # Initialize Colorama
 init(autoreset=True)
