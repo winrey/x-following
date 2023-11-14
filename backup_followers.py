@@ -5,7 +5,7 @@ from colorama import init
 
 from common_cli import select_account
 from client import client
-from compare import list_all_followers_file, load_followers_file
+from compare import compare_followers_with_interact, list_all_followers_file, load_followers_file
 
 # Initialize Colorama
 init(autoreset=True)
@@ -18,12 +18,19 @@ def save_followers():
     with open(f'cache/followers-{name}-{now}.json', 'w') as f:
         json.dump(followers, f)
 
-    print("compare followers...")
+    print("\n\ncompare followers...\n")
     files = list_all_followers_file()
     files = list(filter(lambda x: x['user'] == name, files))
     files.sort(key=lambda x: x['time'])
+
+    if len(files) < 1:
+        print("No enough files to compare")
+        return
+
     print("last file: " + files[-1]['path'])
-    load_followers_file("cache/" + files[-1]['path'])
+    last_followers = load_followers_file("cache/" + files[-1]['path'])
+
+    compare_followers_with_interact(last_followers, followers)
 
 
 if __name__ == '__main__':
